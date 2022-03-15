@@ -1,0 +1,118 @@
+
+use crate::ast::*;
+
+grammar;
+
+pub PROGRAMA: Box<Programa> = {
+  "program" <ID> ":" <VARS> <BLOQUE> => Box::new(Programa::WithVars(<>)),
+  "program" <ID> ":" <BLOQUE> => Box::new(Programa::WithoutVars(<>)),
+}
+
+VARS: Vec<Var> = {
+  "var" <DEC_VARS> ";" => <>,
+  "var" <mut a:DEC_VARS> ";" <b:DEC_VARS> => { a.extend(b); a },
+}
+
+DEC_VARS: Vec<Var> = {
+  <ids:SAME_TYPE_VARS> ":" <t:TIPO> => {
+    ids.iter().map(|id| {
+      Var::Var(id.clone(), t)
+    })
+    .collect()
+  }, 
+}
+
+SAME_TYPE_VARS: Vec<Id> = {
+  <a:ID> "," <b:SAME_TYPE_VARS> => { let mut v = vec![a]; v.extend(b); v },
+  <ID> => vec![<>],
+}
+
+TIPO: Tipo = {
+  "int" => Tipo::Int,
+  "float" => Tipo::Float,
+}
+
+BLOQUE: Bloque = {
+  "{" <CONTENIDO> "}" => Bloque::Bloque(<>),
+}
+
+CONTENIDO: Vec<Estatuto> = {
+  <a:ESTATUTO> <b:CONTENIDO> => { let mut v = vec![a]; v.extend(b); v },
+  <ESTATUTO> => vec![<>],
+}
+
+ESTATUTO: Estatuto= {
+  <ASIGNACION>,
+  <CONDICION>,
+  <ESCRITURA>,  
+}
+
+ASIGNACION: Estatuto = {
+  <ID> "=" <EXPRESION> ";" => Estatuto::Asignacion(<>),
+}
+
+ESCRITURA: Estatuto = {
+  "print" "(" <PRINT_EXPR> ")" ";" => Estatuto::Escritura(<>),
+}
+
+PRINT_EXPR: Vec<PrintArg> = {
+  <a:PRINT_ARG> "," <b:PRINT_EXPR> => { let mut v = vec![a]; v.extend(b); v },
+  <PRINT_ARG> => vec![<>],
+}
+
+PRINT_ARG: PrintArg = {
+  <EXPRESION> => PrintArg::Expresion(<>),
+  "cte.string"=> PrintArg::CteString(String::from(<>)),
+}
+
+EXPRESION: Box<Expresion> = {
+  <EXP> <CMP_OP> <EXP> => Box::new(Expresion::Compuesta(<>)),
+  <EXP> => Box::new(Expresion::Simple(<>)),
+}
+
+CMP_OP: CmpOp = {
+  ">" => CmpOp::GT,
+  "<"=> CmpOp::LT ,
+  "<>" => CmpOp::NE,
+}
+
+EXP: Box<Exp> = {
+  <TERMINO> <SIGN> <EXP> => Box::new(Exp::Compuesta(<>)),
+  TERMINO => Box::new(Exp::Simple(<>)),
+}
+
+SIGN: Sign = {
+  "+" => Sign::PLUS,
+  "-" => Sign::MINUS,
+}
+
+TERMINO: Box<Termino> = {
+  <FACTOR> <FAC_OP> <TERMINO> => Box::new(Termino::Compuesto(<>)),
+  <FACTOR> => Box::new(Termino::Simple(<>)),
+}
+
+FAC_OP: FacOp = {
+  "*" => FacOp::MUL,
+  "/" => FacOp::DIV,
+}
+
+FACTOR: Factor = {
+  "(" <EXPRESION> ")" => Factor::Expresion(<>),
+  <SIGN> <VAR_CTE> => Factor::SignedVar(<>),
+  <VAR_CTE> => Factor::UnsignedVar(<>),
+} 
+
+VAR_CTE: VarCte = {
+  <ID> => VarCte::Id(<>),
+  "cte l" => VarCte::Cte(String::from(<>)),
+  "cte f"=> VarCte::Cte(String::from(<>)),
+}
+
+CONDICION: Estatuto = {
+  "if" "(" <e:EXPRESION> ")" <b:BLOQUE> ";" => Estatuto::Condicion(e, vec![b]),
+  "if" "(" <e:EXPRESION> ")" <b1:BLOQUE> "else" <b2:BLOQUE> ";" => Estatuto::Condicion(e, vec![b1, b2]),
+}
+
+ID: Id = {
+  r"[a-zA-Z][_a-zA-Z0-9]*" => Id::Id(String::from(<>)),
+}
