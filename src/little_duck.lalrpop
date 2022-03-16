@@ -4,21 +4,21 @@ use crate::ast::*;
 grammar;
 
 pub PROGRAMA: Box<Programa> = {
-  "program" <ID> ":" <VARS> <BLOQUE> => Box::new(Programa::WithVars(<>)),
-  "program" <ID> ":" <BLOQUE> => Box::new(Programa::WithoutVars(<>)),
+  "program" <ID> ";" <VARS> <BLOQUE> => Box::new(Programa::WithVars(<>)),
+  "program" <ID> ";" <BLOQUE> => Box::new(Programa::WithoutVars(<>)),
 }
 
 VARS: Vec<Var> = {
-  "var" <DEC_VARS> ";" => <>,
   "var" <mut a:DEC_VARS> ";" <b:DEC_VARS> => { a.extend(b); a },
+  "var" <DEC_VARS> ";" => <>,
 }
 
 DEC_VARS: Vec<Var> = {
   <ids:SAME_TYPE_VARS> ":" <t:TIPO> => {
     ids.iter().map(|id| {
       Var::Var(id.clone(), t)
-    })
-    .collect()
+      })
+      .collect()
   }, 
 }
 
